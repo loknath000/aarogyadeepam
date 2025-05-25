@@ -1,0 +1,534 @@
+{% extends "base.html" %}
+
+{% block title %}Medications - AarogyaDeepa{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <!-- Active Medications -->
+        <div class="col-lg-8">
+            <div class="card glass-effect">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h4 class="mb-0">Active Medications</h4>
+                    <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addMedicationModal">
+                        <i class="fas fa-plus me-2"></i>Add Medication
+                    </button>
+                </div>
+                <div class="card-body">
+                    <div class="medication-list">
+                        {% for med in active_medications %}
+                        <div class="medication-item p-3 mb-3 border rounded">
+                            <div class="row align-items-center">
+                                <div class="col-md-6">
+                                    <div class="d-flex align-items-center">
+                                        <div class="medication-icon rounded-circle bg-primary text-white p-3 me-3">
+                                            <i class="fas fa-pills"></i>
+                                        </div>
+                                        <div>
+                                            <h5 class="mb-1">{{ med.name }}</h5>
+                                            <p class="text-muted mb-0">{{ med.dosage }} - {{ med.frequency }}</p>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-3">
+                                    <div class="progress-info">
+                                        <div class="d-flex justify-content-between mb-1">
+                                            <span>Remaining</span>
+                                            <span>{{ med.remaining }}/{{ med.total }} doses</span>
+                                        </div>
+                                        <div class="progress">
+                                            <div class="progress-bar" role="progressbar" 
+                                                style="width: {{ (med.remaining / med.total * 100)|round }}%"
+                                                aria-valuenow="{{ med.remaining }}" 
+                                                aria-valuemin="0" 
+                                                aria-valuemax="{{ med.total }}">
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-3">
+                                    <div class="d-flex justify-content-end gap-2">
+                                        <button class="btn btn-outline-primary" onclick="recordDose({{ med.id }})">
+                                            <i class="fas fa-check me-2"></i>Take
+                                        </button>
+                                        <button class="btn btn-outline-secondary" onclick="editMedication({{ med.id }})">
+                                            <i class="fas fa-edit"></i>
+                                        </button>
+                                        <button class="btn btn-outline-danger" onclick="discontinueMedication({{ med.id }})">
+                                            <i class="fas fa-times"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="medication-details mt-3">
+                                <div class="row">
+                                    <div class="col-md-4">
+                                        <small class="text-muted d-block">Next Dose</small>
+                                        <strong>{{ med.next_dose.strftime('%I:%M %p') }}</strong>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <small class="text-muted d-block">Started On</small>
+                                        <strong>{{ med.start_date.strftime('%b %d, %Y') }}</strong>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <small class="text-muted d-block">Duration</small>
+                                        <strong>{{ med.duration }}</strong>
+                                    </div>
+                                </div>
+                                {% if med.notes %}
+                                <div class="mt-3">
+                                    <small class="text-muted d-block">Notes</small>
+                                    <p class="mb-0">{{ med.notes }}</p>
+                                </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                        {% else %}
+                        <div class="text-center p-4">
+                            <p class="text-muted mb-0">No active medications</p>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Medication History and Reminders -->
+        <div class="col-lg-4">
+            <!-- Upcoming Doses -->
+            <div class="card glass-effect mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0">Upcoming Doses</h5>
+                </div>
+                <div class="card-body p-0">
+                    <div class="upcoming-doses">
+                        {% for dose in upcoming_doses %}
+                        <div class="dose-item p-3 border-bottom">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <h6 class="mb-1">{{ dose.medication_name }}</h6>
+                                    <p class="text-muted small mb-0">
+                                        <i class="fas fa-clock me-1"></i>
+                                        {{ dose.time.strftime('%I:%M %p') }}
+                                    </p>
+                                </div>
+                                <button class="btn btn-sm btn-outline-primary" onclick="recordDose({{ dose.medication_id }})">
+                                    Take
+                                </button>
+                            </div>
+                        </div>
+                        {% else %}
+                        <div class="text-center p-4">
+                            <p class="text-muted mb-0">No upcoming doses</p>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Medication History -->
+            <div class="card glass-effect">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">Medication History</h5>
+                    <div class="dropdown">
+                        <button class="btn btn-sm btn-outline-primary dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                            <i class="fas fa-filter me-1"></i>Filter
+                        </button>
+                        <ul class="dropdown-menu">
+                            <li><a class="dropdown-item" href="#" data-filter="all">All</a></li>
+                            <li><a class="dropdown-item" href="#" data-filter="active">Active</a></li>
+                            <li><a class="dropdown-item" href="#" data-filter="completed">Completed</a></li>
+                            <li><a class="dropdown-item" href="#" data-filter="discontinued">Discontinued</a></li>
+                        </ul>
+                    </div>
+                </div>
+                <div class="card-body p-0">
+                    <div class="medication-history">
+                        {% for med in medication_history %}
+                        <div class="history-item p-3 border-bottom" data-status="{{ med.status }}">
+                            <div class="d-flex justify-content-between align-items-start">
+                                <div>
+                                    <h6 class="mb-1">{{ med.name }}</h6>
+                                    <p class="text-muted small mb-1">{{ med.dosage }} - {{ med.frequency }}</p>
+                                    <p class="text-muted small mb-0">
+                                        {{ med.start_date.strftime('%b %d, %Y') }} - 
+                                        {{ med.end_date.strftime('%b %d, %Y') if med.end_date else 'Present' }}
+                                    </p>
+                                </div>
+                                <span class="badge bg-{{ 
+                                    'success' if med.status == 'active' else
+                                    'info' if med.status == 'completed' else
+                                    'secondary' }}">
+                                    {{ med.status|title }}
+                                </span>
+                            </div>
+                        </div>
+                        {% else %}
+                        <div class="text-center p-4">
+                            <p class="text-muted mb-0">No medication history</p>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Add/Edit Medication Modal -->
+<div class="modal fade" id="medicationModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="modalTitle">Add Medication</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="medicationForm">
+                    <input type="hidden" id="medicationId">
+                    
+                    <div class="mb-3">
+                        <label for="medicationName" class="form-label">Medication Name</label>
+                        <input type="text" class="form-control" id="medicationName" required>
+                    </div>
+                    
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label for="dosage" class="form-label">Dosage</label>
+                            <input type="text" class="form-control" id="dosage" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="frequency" class="form-label">Frequency</label>
+                            <select class="form-select" id="frequency" required>
+                                <option value="">Select frequency...</option>
+                                <option value="once">Once daily</option>
+                                <option value="twice">Twice daily</option>
+                                <option value="thrice">Thrice daily</option>
+                                <option value="four">Four times daily</option>
+                                <option value="custom">Custom</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <div id="customFrequency" class="mb-3" style="display: none;">
+                        <label class="form-label">Custom Times</label>
+                        <div class="custom-times">
+                            <div class="d-flex gap-2 mb-2">
+                                <input type="time" class="form-control">
+                                <button type="button" class="btn btn-outline-primary" onclick="addCustomTime()">
+                                    <i class="fas fa-plus"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label for="startDate" class="form-label">Start Date</label>
+                            <input type="date" class="form-control" id="startDate" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="duration" class="form-label">Duration</label>
+                            <div class="input-group">
+                                <input type="number" class="form-control" id="duration" min="1">
+                                <select class="form-select" id="durationType">
+                                    <option value="days">Days</option>
+                                    <option value="weeks">Weeks</option>
+                                    <option value="months">Months</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="totalDoses" class="form-label">Total Doses</label>
+                        <input type="number" class="form-control" id="totalDoses" min="1" required>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="notes" class="form-label">Notes</label>
+                        <textarea class="form-control" id="notes" rows="3" 
+                            placeholder="Additional instructions or notes..."></textarea>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <div class="form-check">
+                            <input type="checkbox" class="form-check-input" id="enableReminders" checked>
+                            <label class="form-check-label" for="enableReminders">
+                                Enable Reminders
+                            </label>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" onclick="saveMedication()">Save</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+.medication-list {
+    max-height: calc(100vh - 12rem);
+    overflow-y: auto;
+}
+
+.medication-item {
+    transition: all 0.3s ease;
+}
+
+.medication-item:hover {
+    background: rgba(var(--bs-primary-rgb), 0.05);
+}
+
+.medication-icon {
+    width: 3rem;
+    height: 3rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.progress {
+    height: 0.5rem;
+    border-radius: 1rem;
+}
+
+.upcoming-doses {
+    max-height: 300px;
+    overflow-y: auto;
+}
+
+.dose-item {
+    transition: all 0.3s ease;
+}
+
+.dose-item:hover {
+    background: rgba(var(--bs-primary-rgb), 0.05);
+}
+
+.medication-history {
+    max-height: 400px;
+    overflow-y: auto;
+}
+
+.history-item {
+    transition: all 0.3s ease;
+}
+
+.history-item:hover {
+    background: rgba(var(--bs-primary-rgb), 0.05);
+}
+
+.custom-times {
+    max-height: 150px;
+    overflow-y: auto;
+}
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Initialize frequency selection
+    document.getElementById('frequency').addEventListener('change', function() {
+        const customFreq = document.getElementById('customFrequency');
+        customFreq.style.display = this.value === 'custom' ? 'block' : 'none';
+    });
+
+    // Initialize filters
+    document.querySelectorAll('[data-filter]').forEach(button => {
+        button.addEventListener('click', function(e) {
+            e.preventDefault();
+            filterMedications(this.dataset.filter);
+        });
+    });
+
+    // Initialize modals
+    const medicationModal = document.getElementById('medicationModal');
+    medicationModal.addEventListener('show.bs.modal', function(event) {
+        const button = event.relatedTarget;
+        const isEdit = button.hasAttribute('data-medication-id');
+        
+        document.getElementById('modalTitle').textContent = isEdit ? 'Edit Medication' : 'Add Medication';
+        if (isEdit) {
+            loadMedicationDetails(button.dataset.medicationId);
+        } else {
+            document.getElementById('medicationForm').reset();
+        }
+    });
+});
+
+function addCustomTime() {
+    const container = document.querySelector('.custom-times');
+    const timeInput = document.createElement('div');
+    timeInput.className = 'd-flex gap-2 mb-2';
+    timeInput.innerHTML = `
+        <input type="time" class="form-control">
+        <button type="button" class="btn btn-outline-danger" onclick="this.parentElement.remove()">
+            <i class="fas fa-minus"></i>
+        </button>
+    `;
+    container.appendChild(timeInput);
+}
+
+function recordDose(medicationId) {
+    fetch(`/api/medications/${medicationId}/record`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            taken_at: new Date().toISOString()
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            showNotification('Dose recorded successfully', 'success');
+            location.reload();
+        } else {
+            showNotification(data.error || 'Failed to record dose', 'danger');
+        }
+    })
+    .catch(error => {
+        console.error('Error recording dose:', error);
+        showNotification('Failed to record dose', 'danger');
+    });
+}
+
+function editMedication(medicationId) {
+    fetch(`/api/medications/${medicationId}`)
+        .then(response => response.json())
+        .then(data => {
+            document.getElementById('medicationId').value = data.id;
+            document.getElementById('medicationName').value = data.name;
+            document.getElementById('dosage').value = data.dosage;
+            document.getElementById('frequency').value = data.frequency;
+            document.getElementById('startDate').value = data.start_date;
+            document.getElementById('duration').value = data.duration_value;
+            document.getElementById('durationType').value = data.duration_unit;
+            document.getElementById('totalDoses').value = data.total_doses;
+            document.getElementById('notes').value = data.notes;
+            document.getElementById('enableReminders').checked = data.reminders_enabled;
+
+            if (data.frequency === 'custom') {
+                document.getElementById('customFrequency').style.display = 'block';
+                // Load custom times
+                const container = document.querySelector('.custom-times');
+                container.innerHTML = '';
+                data.custom_times.forEach(time => {
+                    const timeInput = document.createElement('div');
+                    timeInput.className = 'd-flex gap-2 mb-2';
+                    timeInput.innerHTML = `
+                        <input type="time" class="form-control" value="${time}">
+                        <button type="button" class="btn btn-outline-danger" onclick="this.parentElement.remove()">
+                            <i class="fas fa-minus"></i>
+                        </button>
+                    `;
+                    container.appendChild(timeInput);
+                });
+            }
+
+            const modal = new bootstrap.Modal(document.getElementById('medicationModal'));
+            modal.show();
+        })
+        .catch(error => {
+            console.error('Error loading medication details:', error);
+            showNotification('Failed to load medication details', 'danger');
+        });
+}
+
+function saveMedication() {
+    const form = document.getElementById('medicationForm');
+    const formData = {
+        name: document.getElementById('medicationName').value,
+        dosage: document.getElementById('dosage').value,
+        frequency: document.getElementById('frequency').value,
+        start_date: document.getElementById('startDate').value,
+        duration_value: document.getElementById('duration').value,
+        duration_unit: document.getElementById('durationType').value,
+        total_doses: document.getElementById('totalDoses').value,
+        notes: document.getElementById('notes').value,
+        reminders_enabled: document.getElementById('enableReminders').checked
+    };
+
+    if (formData.frequency === 'custom') {
+        formData.custom_times = Array.from(document.querySelectorAll('.custom-times input[type="time"]'))
+            .map(input => input.value);
+    }
+
+    const medicationId = document.getElementById('medicationId').value;
+    const url = medicationId ? 
+        `/api/medications/${medicationId}` : 
+        '/api/medications';
+    const method = medicationId ? 'PUT' : 'POST';
+
+    fetch(url, {
+        method: method,
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(formData)
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            showNotification('Medication saved successfully', 'success');
+            location.reload();
+        } else {
+            showNotification(data.error || 'Failed to save medication', 'danger');
+        }
+    })
+    .catch(error => {
+        console.error('Error saving medication:', error);
+        showNotification('Failed to save medication', 'danger');
+    });
+}
+
+function discontinueMedication(medicationId) {
+    if (confirm('Are you sure you want to discontinue this medication?')) {
+        fetch(`/api/medications/${medicationId}/discontinue`, {
+            method: 'POST'
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                showNotification('Medication discontinued successfully', 'success');
+                location.reload();
+            } else {
+                showNotification(data.error || 'Failed to discontinue medication', 'danger');
+            }
+        })
+        .catch(error => {
+            console.error('Error discontinuing medication:', error);
+            showNotification('Failed to discontinue medication', 'danger');
+        });
+    }
+}
+
+function filterMedications(filter) {
+    const items = document.querySelectorAll('.history-item');
+    items.forEach(item => {
+        const status = item.dataset.status;
+        switch(filter) {
+            case 'active':
+                item.style.display = status === 'active' ? '' : 'none';
+                break;
+            case 'completed':
+                item.style.display = status === 'completed' ? '' : 'none';
+                break;
+            case 'discontinued':
+                item.style.display = status === 'discontinued' ? '' : 'none';
+                break;
+            default:
+                item.style.display = '';
+        }
+    });
+}
+</script>
+{% endblock %} 

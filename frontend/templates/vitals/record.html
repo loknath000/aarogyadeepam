@@ -1,0 +1,339 @@
+{% extends "base.html" %}
+
+{% block title %}Record Vitals - AarogyaDeepa{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card glass-effect fade-in">
+                <div class="card-body p-4">
+                    <div class="text-center mb-4">
+                        <i class="fas fa-heartbeat fa-3x text-primary mb-3"></i>
+                        <h2 class="card-title">Record Vitals</h2>
+                        <p class="text-muted">Track your health metrics</p>
+                    </div>
+
+                    <form id="vitalsForm" method="POST" action="{{ url_for('record_vitals') }}">
+                        <!-- Blood Pressure -->
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label for="systolic" class="form-label">Systolic Pressure (mmHg)</label>
+                                <div class="input-group">
+                                    <span class="input-group-text"><i class="fas fa-heart"></i></span>
+                                    <input type="number" class="form-control" id="systolic" name="blood_pressure_systolic"
+                                        min="70" max="200" step="1" required>
+                                </div>
+                                <div class="form-text" id="systolicHelp"></div>
+                            </div>
+                            <div class="col-md-6">
+                                <label for="diastolic" class="form-label">Diastolic Pressure (mmHg)</label>
+                                <div class="input-group">
+                                    <span class="input-group-text"><i class="fas fa-heart"></i></span>
+                                    <input type="number" class="form-control" id="diastolic" name="blood_pressure_diastolic"
+                                        min="40" max="130" step="1" required>
+                                </div>
+                                <div class="form-text" id="diastolicHelp"></div>
+                            </div>
+                        </div>
+
+                        <!-- Heart Rate -->
+                        <div class="mb-3">
+                            <label for="heartRate" class="form-label">Heart Rate (bpm)</label>
+                            <div class="input-group">
+                                <span class="input-group-text"><i class="fas fa-heartbeat"></i></span>
+                                <input type="number" class="form-control" id="heartRate" name="heart_rate"
+                                    min="40" max="200" step="1" required>
+                            </div>
+                            <div class="form-text" id="heartRateHelp"></div>
+                        </div>
+
+                        <!-- Temperature -->
+                        <div class="mb-3">
+                            <label for="temperature" class="form-label">Temperature (°C)</label>
+                            <div class="input-group">
+                                <span class="input-group-text"><i class="fas fa-thermometer-half"></i></span>
+                                <input type="number" class="form-control" id="temperature" name="temperature"
+                                    min="35" max="42" step="0.1" required>
+                                <button class="btn btn-outline-secondary" type="button" id="toggleTempUnit">
+                                    °C/°F
+                                </button>
+                            </div>
+                            <div class="form-text" id="temperatureHelp"></div>
+                        </div>
+
+                        <!-- Oxygen Saturation -->
+                        <div class="mb-3">
+                            <label for="oxygenSaturation" class="form-label">Oxygen Saturation (%)</label>
+                            <div class="input-group">
+                                <span class="input-group-text"><i class="fas fa-lungs"></i></span>
+                                <input type="number" class="form-control" id="oxygenSaturation" name="oxygen_saturation"
+                                    min="80" max="100" step="1" required>
+                            </div>
+                            <div class="form-text" id="oxygenHelp"></div>
+                        </div>
+
+                        <!-- Weight -->
+                        <div class="mb-3">
+                            <label for="weight" class="form-label">Weight (kg)</label>
+                            <div class="input-group">
+                                <span class="input-group-text"><i class="fas fa-weight"></i></span>
+                                <input type="number" class="form-control" id="weight" name="weight"
+                                    min="20" max="200" step="0.1">
+                                <button class="btn btn-outline-secondary" type="button" id="toggleWeightUnit">
+                                    kg/lb
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Notes -->
+                        <div class="mb-4">
+                            <label for="notes" class="form-label">Notes</label>
+                            <div class="input-group">
+                                <span class="input-group-text"><i class="fas fa-notes-medical"></i></span>
+                                <textarea class="form-control" id="notes" name="notes" rows="3"
+                                    placeholder="Any additional observations or symptoms..."></textarea>
+                            </div>
+                        </div>
+
+                        <!-- Voice Input Button -->
+                        <div class="d-flex justify-content-center mb-4">
+                            <button type="button" class="btn btn-outline-primary" id="voiceInputBtn">
+                                <i class="fas fa-microphone me-2"></i>Voice Input
+                            </button>
+                        </div>
+
+                        <div class="d-grid gap-2">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-save me-2"></i>Save Vitals
+                            </button>
+                            <button type="button" class="btn btn-outline-secondary" onclick="history.back()">
+                                <i class="fas fa-arrow-left me-2"></i>Back
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const form = document.getElementById('vitalsForm');
+    const voiceInputBtn = document.getElementById('voiceInputBtn');
+    let isRecording = false;
+
+    // Form validation and submission
+    form.addEventListener('submit', async function(e) {
+        e.preventDefault();
+        
+        if (!validateForm()) {
+            return;
+        }
+
+        try {
+            const response = await fetch('/api/vitals', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    blood_pressure_systolic: parseInt(document.getElementById('systolic').value),
+                    blood_pressure_diastolic: parseInt(document.getElementById('diastolic').value),
+                    heart_rate: parseInt(document.getElementById('heartRate').value),
+                    temperature: parseFloat(document.getElementById('temperature').value),
+                    oxygen_saturation: parseInt(document.getElementById('oxygenSaturation').value),
+                    weight: parseFloat(document.getElementById('weight').value),
+                    notes: document.getElementById('notes').value
+                })
+            });
+            
+            const data = await response.json();
+            
+            if (response.ok) {
+                showNotification('Vitals recorded successfully', 'success');
+                setTimeout(() => window.location.href = '/dashboard', 1500);
+            } else {
+                showNotification(data.error || 'Failed to record vitals', 'danger');
+            }
+        } catch (error) {
+            showNotification('An error occurred. Please try again.', 'danger');
+            console.error('Error:', error);
+        }
+    });
+
+    // Real-time validation
+    function validateForm() {
+        let isValid = true;
+        
+        // Blood Pressure
+        const systolic = parseInt(document.getElementById('systolic').value);
+        const diastolic = parseInt(document.getElementById('diastolic').value);
+        const systolicHelp = document.getElementById('systolicHelp');
+        const diastolicHelp = document.getElementById('diastolicHelp');
+        
+        if (systolic > diastolic) {
+            if (systolic > 180 || systolic < 90) {
+                systolicHelp.textContent = 'Unusual systolic pressure. Please verify.';
+                systolicHelp.className = 'form-text text-warning';
+            } else {
+                systolicHelp.textContent = 'Normal range';
+                systolicHelp.className = 'form-text text-success';
+            }
+            
+            if (diastolic > 120 || diastolic < 60) {
+                diastolicHelp.textContent = 'Unusual diastolic pressure. Please verify.';
+                diastolicHelp.className = 'form-text text-warning';
+            } else {
+                diastolicHelp.textContent = 'Normal range';
+                diastolicHelp.className = 'form-text text-success';
+            }
+        } else {
+            systolicHelp.textContent = 'Systolic should be higher than diastolic';
+            systolicHelp.className = 'form-text text-danger';
+            diastolicHelp.textContent = 'Diastolic should be lower than systolic';
+            diastolicHelp.className = 'form-text text-danger';
+            isValid = false;
+        }
+        
+        // Heart Rate
+        const heartRate = parseInt(document.getElementById('heartRate').value);
+        const heartRateHelp = document.getElementById('heartRateHelp');
+        
+        if (heartRate > 120 || heartRate < 60) {
+            heartRateHelp.textContent = 'Unusual heart rate. Please verify.';
+            heartRateHelp.className = 'form-text text-warning';
+        } else {
+            heartRateHelp.textContent = 'Normal range';
+            heartRateHelp.className = 'form-text text-success';
+        }
+        
+        // Temperature
+        const temp = parseFloat(document.getElementById('temperature').value);
+        const tempHelp = document.getElementById('temperatureHelp');
+        
+        if (temp > 37.8 || temp < 36.1) {
+            tempHelp.textContent = 'Unusual temperature. Please verify.';
+            tempHelp.className = 'form-text text-warning';
+        } else {
+            tempHelp.textContent = 'Normal range';
+            tempHelp.className = 'form-text text-success';
+        }
+        
+        // Oxygen Saturation
+        const oxygen = parseInt(document.getElementById('oxygenSaturation').value);
+        const oxygenHelp = document.getElementById('oxygenHelp');
+        
+        if (oxygen < 95) {
+            oxygenHelp.textContent = 'Low oxygen saturation. Please verify.';
+            oxygenHelp.className = 'form-text text-warning';
+        } else {
+            oxygenHelp.textContent = 'Normal range';
+            oxygenHelp.className = 'form-text text-success';
+        }
+        
+        return isValid;
+    }
+
+    // Voice input handling
+    voiceInputBtn.addEventListener('click', function() {
+        if (!isRecording) {
+            startVoiceRecognition();
+            this.innerHTML = '<i class="fas fa-stop me-2"></i>Stop Recording';
+            this.classList.replace('btn-outline-primary', 'btn-danger');
+        } else {
+            stopVoiceRecognition();
+            this.innerHTML = '<i class="fas fa-microphone me-2"></i>Voice Input';
+            this.classList.replace('btn-danger', 'btn-outline-primary');
+        }
+        isRecording = !isRecording;
+    });
+
+    // Temperature unit toggle
+    document.getElementById('toggleTempUnit').addEventListener('click', function() {
+        const tempInput = document.getElementById('temperature');
+        const currentValue = parseFloat(tempInput.value);
+        const currentUnit = this.textContent === '°C/°F' ? 'C' : 'F';
+        
+        if (currentUnit === 'C' && !isNaN(currentValue)) {
+            tempInput.value = ((currentValue * 9/5) + 32).toFixed(1);
+            this.textContent = '°F/°C';
+        } else if (!isNaN(currentValue)) {
+            tempInput.value = ((currentValue - 32) * 5/9).toFixed(1);
+            this.textContent = '°C/°F';
+        }
+    });
+
+    // Weight unit toggle
+    document.getElementById('toggleWeightUnit').addEventListener('click', function() {
+        const weightInput = document.getElementById('weight');
+        const currentValue = parseFloat(weightInput.value);
+        const currentUnit = this.textContent === 'kg/lb' ? 'kg' : 'lb';
+        
+        if (currentUnit === 'kg' && !isNaN(currentValue)) {
+            weightInput.value = (currentValue * 2.20462).toFixed(1);
+            this.textContent = 'lb/kg';
+        } else if (!isNaN(currentValue)) {
+            weightInput.value = (currentValue / 2.20462).toFixed(1);
+            this.textContent = 'kg/lb';
+        }
+    });
+
+    // Add input event listeners for real-time validation
+    ['systolic', 'diastolic', 'heartRate', 'temperature', 'oxygenSaturation'].forEach(id => {
+        document.getElementById(id).addEventListener('input', validateForm);
+    });
+});
+
+// Voice recognition functions
+function startVoiceRecognition() {
+    if ('webkitSpeechRecognition' in window) {
+        const recognition = new webkitSpeechRecognition();
+        recognition.continuous = true;
+        recognition.interimResults = true;
+        
+        recognition.onresult = function(event) {
+            const text = event.results[event.results.length - 1][0].transcript.toLowerCase();
+            processVoiceCommand(text);
+        };
+        
+        recognition.start();
+    } else {
+        showNotification('Voice recognition is not supported in your browser', 'warning');
+    }
+}
+
+function processVoiceCommand(text) {
+    // Example command processing
+    const numberMatch = text.match(/\d+(\.\d+)?/);
+    
+    if (text.includes('blood pressure') && numberMatch) {
+        const numbers = text.match(/\d+/g);
+        if (numbers && numbers.length >= 2) {
+            document.getElementById('systolic').value = numbers[0];
+            document.getElementById('diastolic').value = numbers[1];
+        }
+    } else if (text.includes('heart rate') && numberMatch) {
+        document.getElementById('heartRate').value = numberMatch[0];
+    } else if (text.includes('temperature') && numberMatch) {
+        document.getElementById('temperature').value = numberMatch[0];
+    } else if (text.includes('oxygen') && numberMatch) {
+        document.getElementById('oxygenSaturation').value = numberMatch[0];
+    } else if (text.includes('weight') && numberMatch) {
+        document.getElementById('weight').value = numberMatch[0];
+    } else if (text.includes('note')) {
+        const noteText = text.replace('note', '').trim();
+        document.getElementById('notes').value += noteText + '\n';
+    }
+}
+
+function stopVoiceRecognition() {
+    if (window.recognition) {
+        window.recognition.stop();
+    }
+}
+</script>
+{% endblock %} 

@@ -1,0 +1,323 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard - AarogyaDeepa{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Welcome Section -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card glass-effect">
+                <div class="card-body d-flex justify-content-between align-items-center">
+                    <div>
+                        <h1 class="mb-0">Welcome, {{ current_user.first_name }}!</h1>
+                        <p class="text-muted mb-0">Here's your health overview for today</p>
+                    </div>
+                    <button class="btn btn-primary" onclick="location.href='{{ url_for('record_vitals') }}'">
+                        <i class="fas fa-plus me-2"></i>Record Vitals
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Quick Stats -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card glass-effect">
+                <div class="card-body">
+                    <div class="d-flex align-items-center">
+                        <div class="stat-icon bg-primary text-white rounded-circle p-3 me-3">
+                            <i class="fas fa-heartbeat"></i>
+                        </div>
+                        <div>
+                            <h6 class="card-subtitle mb-1">Heart Rate</h6>
+                            <h3 class="card-title mb-0">{{ latest_vitals.heart_rate|default('--', true) }} <small>bpm</small></h3>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card glass-effect">
+                <div class="card-body">
+                    <div class="d-flex align-items-center">
+                        <div class="stat-icon bg-success text-white rounded-circle p-3 me-3">
+                            <i class="fas fa-lungs"></i>
+                        </div>
+                        <div>
+                            <h6 class="card-subtitle mb-1">Blood Oxygen</h6>
+                            <h3 class="card-title mb-0">{{ latest_vitals.oxygen_saturation|default('--', true) }} <small>%</small></h3>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card glass-effect">
+                <div class="card-body">
+                    <div class="d-flex align-items-center">
+                        <div class="stat-icon bg-warning text-white rounded-circle p-3 me-3">
+                            <i class="fas fa-thermometer-half"></i>
+                        </div>
+                        <div>
+                            <h6 class="card-subtitle mb-1">Temperature</h6>
+                            <h3 class="card-title mb-0">{{ latest_vitals.temperature|default('--', true) }} <small>°C</small></h3>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card glass-effect">
+                <div class="card-body">
+                    <div class="d-flex align-items-center">
+                        <div class="stat-icon bg-info text-white rounded-circle p-3 me-3">
+                            <i class="fas fa-tachometer-alt"></i>
+                        </div>
+                        <div>
+                            <h6 class="card-subtitle mb-1">Blood Pressure</h6>
+                            <h3 class="card-title mb-0">{{ latest_vitals.blood_pressure|default('--/--', true) }}</h3>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Health Trends and Upcoming Events -->
+    <div class="row mb-4">
+        <!-- Health Trends -->
+        <div class="col-lg-8">
+            <div class="card glass-effect">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center mb-4">
+                        <h4 class="card-title mb-0">Health Trends</h4>
+                        <div class="btn-group">
+                            <button class="btn btn-outline-primary active" data-period="week">Week</button>
+                            <button class="btn btn-outline-primary" data-period="month">Month</button>
+                            <button class="btn btn-outline-primary" data-period="year">Year</button>
+                        </div>
+                    </div>
+                    <div class="chart-container">
+                        <canvas id="healthTrendsChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Upcoming Events -->
+        <div class="col-lg-4">
+            <div class="card glass-effect">
+                <div class="card-body">
+                    <h4 class="card-title mb-4">Upcoming Events</h4>
+                    <div class="upcoming-events">
+                        {% for event in upcoming_events %}
+                        <div class="event-item mb-3">
+                            <div class="d-flex align-items-center">
+                                <div class="event-icon rounded-circle p-2 me-3
+                                    {% if event.type == 'appointment' %}bg-primary
+                                    {% elif event.type == 'medication' %}bg-warning
+                                    {% else %}bg-info{% endif %} text-white">
+                                    <i class="fas fa-{{ event.icon }}"></i>
+                                </div>
+                                <div>
+                                    <h6 class="mb-1">{{ event.title }}</h6>
+                                    <p class="text-muted small mb-0">
+                                        <i class="fas fa-clock me-1"></i>
+                                        {{ event.datetime.strftime('%b %d, %I:%M %p') }}
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                        {% else %}
+                        <p class="text-muted text-center">No upcoming events</p>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Medications and Family Updates -->
+    <div class="row">
+        <!-- Active Medications -->
+        <div class="col-lg-6">
+            <div class="card glass-effect">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center mb-4">
+                        <h4 class="card-title mb-0">Active Medications</h4>
+                        <button class="btn btn-sm btn-primary" onclick="location.href='{{ url_for('medications') }}'">
+                            View All
+                        </button>
+                    </div>
+                    <div class="medication-list">
+                        {% for med in active_medications %}
+                        <div class="medication-item mb-3">
+                            <div class="d-flex align-items-center">
+                                <div class="medication-icon rounded-circle p-2 me-3 bg-warning text-white">
+                                    <i class="fas fa-pills"></i>
+                                </div>
+                                <div class="flex-grow-1">
+                                    <h6 class="mb-1">{{ med.name }}</h6>
+                                    <p class="text-muted small mb-0">
+                                        {{ med.dosage }} - {{ med.frequency }}
+                                    </p>
+                                </div>
+                                <button class="btn btn-sm btn-outline-primary" onclick="recordMedication({{ med.id }})">
+                                    Take
+                                </button>
+                            </div>
+                        </div>
+                        {% else %}
+                        <p class="text-muted text-center">No active medications</p>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Family Updates -->
+        <div class="col-lg-6">
+            <div class="card glass-effect">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center mb-4">
+                        <h4 class="card-title mb-0">Family Updates</h4>
+                        <button class="btn btn-sm btn-primary" onclick="location.href='{{ url_for('family') }}'">
+                            Manage Family
+                        </button>
+                    </div>
+                    <div class="family-updates">
+                        {% for member in family_members %}
+                        <div class="family-update-item mb-3">
+                            <div class="d-flex align-items-center">
+                                <div class="member-avatar rounded-circle me-3">
+                                    {% if member.avatar_url %}
+                                    <img src="{{ member.avatar_url }}" alt="{{ member.name }}" class="rounded-circle" width="40">
+                                    {% else %}
+                                    <div class="avatar-placeholder bg-primary text-white rounded-circle p-2">
+                                        {{ member.name[:1] }}
+                                    </div>
+                                    {% endif %}
+                                </div>
+                                <div class="flex-grow-1">
+                                    <h6 class="mb-1">{{ member.name }}</h6>
+                                    <p class="text-muted small mb-0">
+                                        Last update: {{ member.last_update.strftime('%b %d, %I:%M %p') }}
+                                    </p>
+                                </div>
+                                <button class="btn btn-sm btn-outline-primary" onclick="viewMember({{ member.id }})">
+                                    View
+                                </button>
+                            </div>
+                        </div>
+                        {% else %}
+                        <p class="text-muted text-center">No family members added</p>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Initialize health trends chart
+    const ctx = document.getElementById('healthTrendsChart').getContext('2d');
+    const healthTrendsChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: {{ dates|tojson }},
+            datasets: [
+                {
+                    label: 'Heart Rate',
+                    data: {{ heart_rates|tojson }},
+                    borderColor: 'rgb(255, 99, 132)',
+                    tension: 0.1
+                },
+                {
+                    label: 'Blood Oxygen',
+                    data: {{ oxygen_levels|tojson }},
+                    borderColor: 'rgb(54, 162, 235)',
+                    tension: 0.1
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    position: 'top',
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true
+                }
+            }
+        }
+    });
+
+    // Period selector for health trends
+    document.querySelectorAll('[data-period]').forEach(button => {
+        button.addEventListener('click', function() {
+            document.querySelector('[data-period].active').classList.remove('active');
+            this.classList.add('active');
+            updateHealthTrends(this.dataset.period);
+        });
+    });
+});
+
+// Update health trends data
+function updateHealthTrends(period) {
+    fetch(`/api/analytics/health-trends?period=${period}`)
+        .then(response => response.json())
+        .then(data => {
+            const chart = Chart.getChart('healthTrendsChart');
+            chart.data.labels = data.dates;
+            chart.data.datasets[0].data = data.heart_rates;
+            chart.data.datasets[1].data = data.oxygen_levels;
+            chart.update();
+        })
+        .catch(error => console.error('Error:', error));
+}
+
+// Record medication
+function recordMedication(medicationId) {
+    fetch('/api/medications/record', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            medication_id: medicationId,
+            taken_at: new Date().toISOString()
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            showNotification('Medication recorded successfully', 'success');
+        } else {
+            showNotification(data.error, 'danger');
+        }
+    })
+    .catch(error => {
+        showNotification('Failed to record medication', 'danger');
+        console.error('Error:', error);
+    });
+}
+
+// View family member details
+function viewMember(memberId) {
+    window.location.href = `/family/member/${memberId}`;
+}
+
+// Initialize real-time updates
+initializeWebSocket();
+</script>
+{% endblock %} 

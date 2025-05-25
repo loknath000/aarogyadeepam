@@ -1,0 +1,219 @@
+{% extends "base.html" %}
+
+{% block title %}Register - AarogyaDeepa{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="row justify-content-center align-items-center min-vh-100">
+        <div class="col-md-8 col-lg-6">
+            <div class="card glass-effect fade-in">
+                <div class="card-body p-4">
+                    <div class="text-center mb-4">
+                        <i class="fas fa-user-plus fa-3x text-primary mb-3"></i>
+                        <h2 class="card-title">Create Account</h2>
+                        <p class="text-muted">Join AarogyaDeepa for personalized healthcare</p>
+                    </div>
+
+                    <form id="registerForm" method="POST" action="{{ url_for('register') }}">
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="first_name" class="form-label">First Name</label>
+                                <div class="input-group">
+                                    <span class="input-group-text"><i class="fas fa-user"></i></span>
+                                    <input type="text" class="form-control" id="first_name" name="first_name" required>
+                                </div>
+                            </div>
+
+                            <div class="col-md-6 mb-3">
+                                <label for="last_name" class="form-label">Last Name</label>
+                                <div class="input-group">
+                                    <span class="input-group-text"><i class="fas fa-user"></i></span>
+                                    <input type="text" class="form-control" id="last_name" name="last_name" required>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="email" class="form-label">Email Address</label>
+                            <div class="input-group">
+                                <span class="input-group-text"><i class="fas fa-envelope"></i></span>
+                                <input type="email" class="form-control" id="email" name="email" required>
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="phone" class="form-label">Phone Number</label>
+                            <div class="input-group">
+                                <span class="input-group-text"><i class="fas fa-phone"></i></span>
+                                <input type="tel" class="form-control" id="phone" name="phone" pattern="[0-9]{10}">
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="password" class="form-label">Password</label>
+                            <div class="input-group">
+                                <span class="input-group-text"><i class="fas fa-lock"></i></span>
+                                <input type="password" class="form-control" id="password" name="password" required>
+                                <button class="btn btn-outline-secondary" type="button" id="togglePassword">
+                                    <i class="fas fa-eye"></i>
+                                </button>
+                            </div>
+                            <div class="password-strength mt-2" id="passwordStrength"></div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="confirm_password" class="form-label">Confirm Password</label>
+                            <div class="input-group">
+                                <span class="input-group-text"><i class="fas fa-lock"></i></span>
+                                <input type="password" class="form-control" id="confirm_password" name="confirm_password" required>
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="language" class="form-label">Preferred Language</label>
+                            <div class="input-group">
+                                <span class="input-group-text"><i class="fas fa-language"></i></span>
+                                <select class="form-select" id="language" name="preferred_language">
+                                    <option value="en">English</option>
+                                    <option value="hi">हिंदी</option>
+                                    <option value="kn">ಕನ್ನಡ</option>
+                                    <option value="te">తెలుగు</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <div class="form-check">
+                                <input type="checkbox" class="form-check-input" id="terms" name="terms" required>
+                                <label class="form-check-label" for="terms">
+                                    I agree to the <a href="{{ url_for('terms') }}" class="text-primary">Terms of Service</a> and
+                                    <a href="{{ url_for('privacy') }}" class="text-primary">Privacy Policy</a>
+                                </label>
+                            </div>
+                        </div>
+
+                        <button type="submit" class="btn btn-primary w-100 mb-3">
+                            <i class="fas fa-user-plus me-2"></i> Create Account
+                        </button>
+                    </form>
+
+                    <div class="text-center">
+                        <p class="mb-3">Or sign up with</p>
+                        <div class="d-flex justify-content-center gap-2 mb-3">
+                            <button class="btn btn-outline-primary" onclick="socialLogin('google')">
+                                <i class="fab fa-google"></i>
+                            </button>
+                            <button class="btn btn-outline-primary" onclick="socialLogin('facebook')">
+                                <i class="fab fa-facebook-f"></i>
+                            </button>
+                            <button class="btn btn-outline-primary" onclick="socialLogin('apple')">
+                                <i class="fab fa-apple"></i>
+                            </button>
+                        </div>
+                        <p class="mb-0">
+                            Already have an account? 
+                            <a href="{{ url_for('login') }}" class="text-primary text-decoration-none">Sign In</a>
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Toggle password visibility
+    const togglePassword = document.getElementById('togglePassword');
+    const password = document.getElementById('password');
+    
+    togglePassword.addEventListener('click', function() {
+        const type = password.getAttribute('type') === 'password' ? 'text' : 'password';
+        password.setAttribute('type', type);
+        this.querySelector('i').className = `fas fa-${type === 'password' ? 'eye' : 'eye-slash'}`;
+    });
+    
+    // Password strength checker
+    const passwordInput = document.getElementById('password');
+    const strengthIndicator = document.getElementById('passwordStrength');
+    
+    passwordInput.addEventListener('input', function() {
+        const password = this.value;
+        const strength = checkPasswordStrength(password);
+        updateStrengthIndicator(strength);
+    });
+    
+    function checkPasswordStrength(password) {
+        let score = 0;
+        
+        // Length check
+        if (password.length >= 8) score++;
+        if (password.length >= 12) score++;
+        
+        // Complexity checks
+        if (/[A-Z]/.test(password)) score++;
+        if (/[a-z]/.test(password)) score++;
+        if (/[0-9]/.test(password)) score++;
+        if (/[^A-Za-z0-9]/.test(password)) score++;
+        
+        return score;
+    }
+    
+    function updateStrengthIndicator(score) {
+        const messages = ['Very Weak', 'Weak', 'Fair', 'Good', 'Strong', 'Very Strong'];
+        const colors = ['#dc3545', '#ffc107', '#fd7e14', '#20c997', '#198754', '#0d6efd'];
+        
+        strengthIndicator.textContent = messages[score];
+        strengthIndicator.style.color = colors[score];
+    }
+    
+    // Form validation and submission
+    const registerForm = document.getElementById('registerForm');
+    registerForm.addEventListener('submit', async function(e) {
+        e.preventDefault();
+        
+        const password = document.getElementById('password').value;
+        const confirmPassword = document.getElementById('confirm_password').value;
+        
+        if (password !== confirmPassword) {
+            showNotification('Passwords do not match', 'danger');
+            return;
+        }
+        
+        try {
+            const response = await fetch('/api/auth/register', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    first_name: document.getElementById('first_name').value,
+                    last_name: document.getElementById('last_name').value,
+                    email: document.getElementById('email').value,
+                    phone: document.getElementById('phone').value,
+                    password: password,
+                    preferred_language: document.getElementById('language').value
+                })
+            });
+            
+            const data = await response.json();
+            
+            if (response.ok) {
+                localStorage.setItem('access_token', data.access_token);
+                window.location.href = '/dashboard';
+            } else {
+                showNotification(data.error || 'Registration failed', 'danger');
+            }
+        } catch (error) {
+            showNotification('An error occurred. Please try again.', 'danger');
+        }
+    });
+});
+
+function socialLogin(provider) {
+    window.location.href = `/api/auth/${provider}`;
+}
+</script>
+{% endblock %} 
